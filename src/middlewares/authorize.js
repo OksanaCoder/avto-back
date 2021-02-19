@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const { verifyJWT } = require("../auth/authTools")
 const db = require("../db/index")
 
@@ -5,7 +6,7 @@ const authorize = async (req, res, next) => {
   try {
     const token = req.cookies.accessToken
    
-    console.log(token)
+    console.log("........................",token)
     const decoded = await verifyJWT(token)
     const user = await db.query('SELECT * FROM "users" WHERE _id= $1',
       [decoded._id])
