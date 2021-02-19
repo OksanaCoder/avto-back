@@ -48,15 +48,16 @@ userRouter.get("/", authorize,onlyForAdmin, async (req, res, next) => {
         next(error)
     }
 })
-userRouter.post("/register", authorize, async (req, res, next) => {
+userRouter.post("/register",  async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
-  
-        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,email, username, phone, password) 
-            Values ($1, $2, $3)
+
+        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone, role ) 
+            Values ($1, $2, $3,$4, $5, $6,$7, $8)
             RETURNING *`,
-            [req.body.email, hashedPassword, req.body.title])
+            [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
+              hashedPassword,req.body.dob, req.body.phone, req.body.role])
 
         // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
         // const msg = {
@@ -73,7 +74,7 @@ userRouter.post("/register", authorize, async (req, res, next) => {
         // };
         // await sgMail.send(msg);
 
-        res.status(201).send(newStudent.rows[0])
+        res.status(201).send(newUser.rows[0])
     } catch (error) {
         next(error)
     }
