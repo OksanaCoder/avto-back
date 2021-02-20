@@ -59,20 +59,7 @@ userRouter.post("/register",  async (req, res, next) => {
             [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
               hashedPassword,req.body.dob, req.body.phone, req.body.role])
 
-        // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-        // const msg = {
-        //     to: newUser.rows[0].email,
-        //     from: 'srms.school.records@gmail.com',
-        //     subject: 'School Account Created',
-        //     text: `Hello ${newStudent.rows[0].firstname} ${newStudent.rows[0].lastname}, 
-        //         \nWe are happy to inform you that a page has been created for you on the school portal.
-        //         \nYou can access your account page with the following credentials:
-        //         \nEmail => ${newUser.rows[0].email}
-        //         \nPassword => ${req.body.password}.
-        //         \n\nKind regards
-        //         \nSchool Management.`
-        // };
-        // await sgMail.send(msg);
+      
 
         res.status(201).send(newUser.rows[0])
     } catch (error) {
