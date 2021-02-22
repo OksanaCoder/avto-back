@@ -48,32 +48,31 @@ userRouter.get("/", authorize,onlyForAdmin, async (req, res, next) => {
         next(error)
     }
 })
-userRouter.post("/register", authorize, async (req, res, next) => {
+
+userRouter.get("/me", authorize, async (req, res, next) => {
+    try {
+        res.send(req.user)
+        
+
+
+    } catch (error) {
+        next(error)
+    }
+})
+userRouter.post("/register",  async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
-  
-        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,email, username, phone, password) 
-            Values ($1, $2, $3)
+
+        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone, role ) 
+            Values ($1, $2, $3,$4, $5, $6,$7, $8)
             RETURNING *`,
-            [req.body.email, hashedPassword, req.body.title])
+            [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
+              hashedPassword,req.body.dob, req.body.phone, req.body.role])
 
-        // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-        // const msg = {
-        //     to: newUser.rows[0].email,
-        //     from: 'srms.school.records@gmail.com',
-        //     subject: 'School Account Created',
-        //     text: `Hello ${newStudent.rows[0].firstname} ${newStudent.rows[0].lastname}, 
-        //         \nWe are happy to inform you that a page has been created for you on the school portal.
-        //         \nYou can access your account page with the following credentials:
-        //         \nEmail => ${newUser.rows[0].email}
-        //         \nPassword => ${req.body.password}.
-        //         \n\nKind regards
-        //         \nSchool Management.`
-        // };
-        // await sgMail.send(msg);
+      
 
-        res.status(201).send(newStudent.rows[0])
+        res.status(201).send(newUser.rows[0])
     } catch (error) {
         next(error)
     }
@@ -107,21 +106,23 @@ userRouter.post("/login", async (req, res, next) => {
 
         const user = getUser.rows[0]
 
-        const tokens = await authenticate(user)
-        res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-        })
-        res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-            path: "/users/refreshToken",
-        })
+        const tokens = await authenticate(user);
+        res.cookie("accessToken", tokens.accessToken);
+        res.cookie("refreshToken", tokens.refreshToken);
+        // res.cookie("accessToken", tokens.accessToken, {
+        //     httpOnly: true,
+        //     sameSite: "none",
+        //     secure: true,
+        // })
+        // res.cookie("refreshToken", tokens.refreshToken, {
+        //     httpOnly: true,
+        //     sameSite: "none",
+        //     secure: true,
+        //     path: "/users/refreshToken",
+        // })
         // res.send(tokens)
         // res.send({ title: user.title, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken })
-        res.send(user.title)
+        res.send(user)
 
     } catch (error) {
         next(error)
@@ -131,7 +132,7 @@ userRouter.post("/login", async (req, res, next) => {
 userRouter.post("/logout", authorize, async (req, res, next) => {
     try {
         let params = []
-        let query = `UPDATE "users" SET refresh_token = null`
+        let query = `UPDATE "users" SET refreshToken = null`
 
         params.push(req.user._id)
         query += " WHERE _id = $" + (params.length) + " RETURNING *"
