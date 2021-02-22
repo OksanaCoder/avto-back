@@ -46,7 +46,7 @@ router.get("/", async(req, res)=>{
     delete req.query.offset
     delete req.query.limit
     
-    let query = 'SELECT * FROM "products"'
+    let query = 'SELECT * FROM "cars"'
     const params=[]
     for (const queryParam in req.query) {
         params.push(req.query[queryParam])
@@ -65,21 +65,21 @@ router.get("/", async(req, res)=>{
     
     
     const response = await db.query(query, params)
-    res.send({count: response.rows.length, products: response.rows})
+    res.send({count: response.rows.length, cars: response.rows})
 
 })
 
 router.get("/search/:query", async(req, res) => {
-    const response = await db.query(`SELECT * FROM "products" WHERE 
-                                    brand ILIKE '${"%" + req.params.query + "%"}' OR
-                                    category ILIKE '${"%" + req.params.query + "%"}'
+    const response = await db.query(`SELECT * FROM "cars" WHERE 
+                                    model ILIKE '${"%" + req.params.query + "%"}' OR
+                                    year ILIKE '${"%" + req.params.query + "%"}'
                                     LIMIT $1 OFFSET $2 
                                     `, [ req.query.limit || 10, req.query.offset || 0])
 
     res.send(response.rows)
 })
 router.get("/:id", async (req, res)=>{
-    const response = await db.query('SELECT * FROM "products" WHERE _id= $1', 
+    const response = await db.query('SELECT * FROM "cars" WHERE _id= $1', 
                                                                                         [ req.params.id ])
 
     if (response.rowCount === 0) 
@@ -90,8 +90,8 @@ router.get("/:id", async (req, res)=>{
 
 router.get("/:id/reviews", async (req, res)=>{
     const response = await db.query(`SELECT  * FROM "reviews" 
-                                    JOIN "products" ON reviews.productid= products._id 
-                                    AND products._id = $1`, 
+                                    JOIN "cars" ON reviews.productid= products._id 
+                                    AND cars._id = $1`, 
                                     [req.params.id])
     if (response.rowCount === 0) 
         return res.status(404).send("Not found")
@@ -100,7 +100,7 @@ router.get("/:id/reviews", async (req, res)=>{
 })
 
 router.post("/", authorize, onlyForAdmin, async (req, res)=> {
-    const response = await db.query(`INSERT INTO "products" ( make, model,year, price,fuel,odometer,transmission,drive,color,contact,location description) 
+    const response = await db.query(`INSERT INTO "cars" ( make, model,year, price,fuel,odometer,transmission,drive,color,contact,location description) 
                                      Values ($1, $2, $3, $4, $5,$6,$7, $8, $9, $10, $11,$12)
                                      RETURNING *`, 
                                     [ req.body.make, req.body.model, req.body.year, req.body.price, req.body.fuel, req.body.odometer, req.body.transmission, req.body.drive, req.body.color, req.body.contact, req.body.location ])
@@ -112,7 +112,7 @@ router.post("/", authorize, onlyForAdmin, async (req, res)=> {
 router.put("/:id",authorize, onlyForAdmin, async (req, res)=> {
     try {
         let params = []
-        let query = 'UPDATE "products" SET '
+        let query = 'UPDATE "cars" SET '
         for (bodyParamName in req.body) {
             query +=
                 (params.length > 0 ? ", " : '') +
@@ -140,7 +140,7 @@ router.put("/:id",authorize, onlyForAdmin, async (req, res)=> {
 })
 
 router.delete("/:id",authorize, onlyForAdmin, async (req, res) => {
-    const response = await db.query(`DELETE FROM "products" WHERE _id= $1`, [ req.params.id ])
+    const response = await db.query(`DELETE FROM "cars" WHERE _id= $1`, [ req.params.id ])
 
     if (response.rowCount === 0)
         return res.status(404).send("Not Found")
