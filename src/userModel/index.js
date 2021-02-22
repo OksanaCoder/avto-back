@@ -64,11 +64,11 @@ userRouter.post("/register",  async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
 
-        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone, role ) 
-            Values ($1, $2, $3,$4, $5, $6,$7, $8)
+        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone ) 
+            Values ($1, $2, $3,$4, $5, $6,$7)
             RETURNING *`,
             [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
-              hashedPassword,req.body.dob, req.body.phone, req.body.role])
+              hashedPassword,req.body.dob, req.body.phone])
 
       
 
