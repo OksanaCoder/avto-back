@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { verifyJWT } = require("../auth/authTools")
-const db = require("../db/index")
+const db = require("../db")
 
 const authorize = async (req, res, next) => {
   try {
@@ -18,7 +18,7 @@ const authorize = async (req, res, next) => {
     req.token = token
     req.user = user.rows[0]
 
-    if (req.user.refresh_token === null) {
+    if (req.user.refreshToken === null) {
       const err = new Error("Sorry you already logged out!")
       err.httpStatusCode = 403
       next(err)
@@ -32,7 +32,7 @@ const authorize = async (req, res, next) => {
 }
 
 const onlyForAdmin = async (req, res, next) => {
-  if (req.user && req.user.title === "admin") next()
+  if (req.user && req.user.role === "admin") next()
   else {
     const err = new Error("Only for admin!")
     err.httpStatusCode = 403

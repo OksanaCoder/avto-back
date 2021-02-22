@@ -48,6 +48,17 @@ userRouter.get("/", authorize,onlyForAdmin, async (req, res, next) => {
         next(error)
     }
 })
+
+userRouter.get("/me", authorize, async (req, res, next) => {
+    try {
+        res.send(req.user)
+        
+
+
+    } catch (error) {
+        next(error)
+    }
+})
 userRouter.post("/register",  async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
@@ -95,21 +106,23 @@ userRouter.post("/login", async (req, res, next) => {
 
         const user = getUser.rows[0]
 
-        const tokens = await authenticate(user)
-        res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-        })
-        res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-            path: "/users/refreshToken",
-        })
+        const tokens = await authenticate(user);
+        res.cookie("accessToken", tokens.accessToken);
+        res.cookie("refreshToken", tokens.refreshToken);
+        // res.cookie("accessToken", tokens.accessToken, {
+        //     httpOnly: true,
+        //     sameSite: "none",
+        //     secure: true,
+        // })
+        // res.cookie("refreshToken", tokens.refreshToken, {
+        //     httpOnly: true,
+        //     sameSite: "none",
+        //     secure: true,
+        //     path: "/users/refreshToken",
+        // })
         // res.send(tokens)
         // res.send({ title: user.title, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken })
-        res.send(user.title)
+        res.send(user)
 
     } catch (error) {
         next(error)
@@ -119,7 +132,7 @@ userRouter.post("/login", async (req, res, next) => {
 userRouter.post("/logout", authorize, async (req, res, next) => {
     try {
         let params = []
-        let query = `UPDATE "users" SET refresh_token = null`
+        let query = `UPDATE "users" SET refreshToken = null`
 
         params.push(req.user._id)
         query += " WHERE _id = $" + (params.length) + " RETURNING *"
