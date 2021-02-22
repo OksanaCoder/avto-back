@@ -1,20 +1,22 @@
 const jwt = require("jsonwebtoken")
-const db = require("../db/index")
+const db = require("../db")
 
 const authenticate = async (user) => {
     try {
         const newAccessToken = await generateJWT({ _id: user._id })
+        console.log("New access token", newAccessToken)
         const newRefreshToken = await generateRefreshJWT({ _id: user._id })
 
         let params = []
         let query = `UPDATE "users" SET refresh_token = '${newRefreshToken}'`
 
         params.push(user._id)
-        query += " WHERE _id = $" + (params.length) + " RETURNING *"
+        query += " WHERE _id = $" + (params.length) + " RETURNING *",
+        
         console.log(query)
 
         const result = await db.query(query, params)
-
+        console.log(result)
         return { accessToken: newAccessToken, refreshToken: newRefreshToken }
     } catch (error) {
         console.log(error)
@@ -67,7 +69,7 @@ const refreshToken = async (oldRefreshToken) => {
         throw new Error(`Access is forbidden`)
     }
 
-    const currentRefreshToken = user.rows[0].refresh_token
+    const currentRefreshToken = user.rows[0].refreshToken
 
     if (!currentRefreshToken) {
         throw new Error(`Refresh token is wrong`)
