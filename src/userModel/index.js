@@ -59,6 +59,25 @@ userRouter.get("/me", authorize, async (req, res, next) => {
         next(error)
     }
 })
+userRouter.post("/register-admin",  async (req, res, next) => {
+    try {
+        const hashedPassword = await bcrypt.hash(req.body.password, 12)
+
+
+        const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone, role) 
+            Values ($1, $2, $3,$4, $5, $6,$7, $8)
+            RETURNING *`,
+            [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
+              hashedPassword,req.body.dob, req.body.phone, req.body.role])
+
+      
+
+        res.status(201).send(newUser.rows[0])
+    } catch (error) {
+        next(error)
+    }
+})
+
 userRouter.post("/register",  async (req, res, next) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10)
@@ -69,10 +88,14 @@ userRouter.post("/register",  async (req, res, next) => {
             RETURNING *`,
             [req.body.firstname,req.body.lastname, req.body.username, req.body.email,
               hashedPassword,req.body.dob, req.body.phone])
-
+            if(newUser){
+                res.status(201).send(newUser.rows[0])
+            }else{
+                res.status(404).json({message: "Error registering new user"})
+            }
       
 
-        res.status(201).send(newUser.rows[0])
+        
     } catch (error) {
         next(error)
     }
