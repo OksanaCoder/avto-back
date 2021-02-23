@@ -9,18 +9,18 @@ const listEndpoints = require("express-list-endpoints")
 const path = require("path")
 const server = express()
 const whitelist = ["http://localhost:3000", "http://localhost:3001"];
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (whitelist.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-};
+// const corsOptions = {
+//   origin: (origin, callback) => {
+//     if (whitelist.indexOf(origin) !== -1 || !origin) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true,
+// };
 
-server.use(cors(corsOptions))
+server.use(cors())
 server.use(express.json());
 server.use(cookieParser());
 server.use(express.static(path.join(__dirname, `../public`)))
