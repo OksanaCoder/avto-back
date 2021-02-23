@@ -61,7 +61,7 @@ userRouter.get("/me", authorize, async (req, res, next) => {
 })
 userRouter.post("/register-admin",  async (req, res, next) => {
     try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 12)
+        const hashedPassword = await bcrypt.hash(req.body.password, 8)
 
 
         const newUser = await db.query(`INSERT INTO "users" (firstname, lastname,username,email, password, dob, phone, role) 
