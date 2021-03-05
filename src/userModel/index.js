@@ -1,6 +1,9 @@
 const express = require("express");
 const UserModel = require("./Schema");
 const mailgun = require("mailgun-js");
+const sgMail = require("@sendgrid/mail");
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 const jwt = require("jsonwebtoken");
 
 const _ = require("lodash");
@@ -10,20 +13,21 @@ const { authenticate, refreshToken } = require("../auth/authTools");
 const { authorize, adminOnly } = require("../middlewares/authorize");
 const { json } = require("express");
 const router = express.Router();
-const path = require("path")
+
 
 router.post("/register", async (req, res) => {
   try {
-    const {
-      name,
-      surname,
-      username,
-      phone,
-      dob,
-      email,
-      password,
-      //role,
-    } = req.body;
+    // const {
+    //   name,
+    //   surname,
+    //   username,
+    //   phone,
+    //   dob,
+    //   email,
+    //   password,
+    //   //role,
+    // } = req.body;
+    const newUser = new UserModel(req.body);
     // const filepath = path.join(__dirname, `../../public/ADEDEJIMICHAEL.pdf`)
     // console.log(filepame)
     UserModel.findOne({ email }).exec((err, user) => {
@@ -32,7 +36,7 @@ router.post("/register", async (req, res) => {
       }
 
       const token = jwt.sign(
-        { name, surname, username, phone, dob, email, password},
+        {newUser},
         process.env.ACC_ACTIVATION_KEY,
         {
           expiresIn: "30m",
@@ -40,8 +44,8 @@ router.post("/register", async (req, res) => {
       );
 
       const data = {
-        from: "noreply@betsoka.com.ng",
-        to: email,
+        from: "avtoeinc@gmail.com",
+        to: newUser.email,
         subject: "Account Activation Link",
         html: `<h2> Please click on given link to activate your account</h2>
         <p>This link expires in <strong>30 mins</strong> </p>
@@ -49,22 +53,32 @@ router.post("/register", async (req, res) => {
         <p>${process.env.CLIENT_URL}/authentication/activate/${token}</>
         <small>Best regards,</small>
         <br>
-        <strong>BetSoka INC,</strong>
-        <br>
-        <strong>Lagos, Nigeria</strong>
+        
+        <strong>Kyviv, Ukraine</strong>
       `,
       };
-      mg.messages().send(data, function (error, body) {
-        if (error) {
-          return res.json({
-            error: err.message,
+      sgMail
+        .send(data)
+        .then(() => {
+          console.log("Email sent");
+          res.json({
+            message: "Email has been sent kindly activate your account",
           });
-        }
-        console.log(body);
-        return res.json({
-          message: "Email has been sent kindly activate your account",
+        })
+        .catch((error) => {
+          console.error(error);
         });
-      });
+      // mg.messages().send(data, function (error, body) {
+      //   if (error) {
+      //     return res.json({
+      //       error: err.message,
+      //     });
+      //   }
+      //   console.log(body);
+      //   return res.json({
+      //     message: "Email has been sent kindly activate your account",
+      //   });
+      // });
     });
   } catch (error) {
     res.send(error.errors);
@@ -130,13 +144,24 @@ router.post("/email-activate", async (req, res, next) => {
                 <strong>Lagos, Nigeria</strong>
                 `,
                 };
-                mg.messages().send(data, function (error, body) {
-                  if (error) {
-                    return res.json({
-                      error: err.message,
-                    });
-                  }
-                  return res.json({ message: "Account Activated!" });
+                // mg.messages().send(data, function (error, body) {
+                //   if (error) {
+                //     return res.json({
+                //       error: err.message,
+                //     });
+                //   }
+                //   return res.json({ message: "Account Activated!" });
+                // });
+                sgMail
+                .send(data)
+                .then(() => {
+                  console.log("Email sent");
+                  res.json({
+                    message: "Account Activated",
+                  });
+                })
+                .catch((error) => {
+                  console.error(error);
                 });
               });
             });
@@ -182,16 +207,17 @@ router.put("/forgot-password", async (req, res, next) => {
         if (err) {
           return res.status(400).json({ error: "reset passord link error" });
         } else {
-          mg.messages().send(data, function (error, body) {
-            if (error) {
-              return res.json({
-                error: err.message,
-              });
-            }
-            return res.json({
-              message: "Email has been sent, kindly reset your password",
-            });
+          sgMail
+        .send(data)
+        .then(() => {
+          console.log("Email sent");
+          res.json({
+            message: "An email has been sent to you!",
           });
+        })
+        .catch((error) => {
+          console.error(error);
+        });
         }
       });
     });
@@ -244,7 +270,7 @@ router.put("/reset-password", async (req, res, next) => {
     next(error);
   }
 });
-router.get("/",authorize, adminOnly, async (req, res, next) => {
+router.get("/", authorize, adminOnly, async (req, res, next) => {
   try {
     const users = await UserModel.find(req.query);
     res.send({
@@ -363,11 +389,10 @@ router.post("/refreshToken", async (req, res, next) => {
 });
 // router.get("/:id/accounts", authorize, async (req, res, next) => {
 //   try {
-    
-   
+
 //     const user = await UserModel.findById(req.params.id).populate('account').exec();
 //     res.status(200).send(user)
-  
+
 //   } catch (error) {
 //     next(error);
 //   }
@@ -385,8 +410,5 @@ router.post("/refreshToken", async (req, res, next) => {
 //     next(error);
 //   }
 // });
-
-
-
 
 module.exports = router;
