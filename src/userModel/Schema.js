@@ -4,11 +4,11 @@ const bcrypt = require("bcrypt")
 
 const userSchema = new Schema(
   {
-    name: {
+    firstname: {
       type: String,
       required: true,
     },
-    surname: {
+    lastname: {
       type: String,
       required: true,
     },
@@ -19,57 +19,59 @@ const userSchema = new Schema(
       trim: true,
       unique: true,
     },
-    phone: {
-      type: String,
-      validate: {
-        validator: function (v) {
-          return /0\d{2}\d{4}\d{4}/.test(v);
-        },
-        message: "Phone number is not valid, allows only 11 digits",
+ 
+    email: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        validate: [
+          validator({
+            validator: "isEmail",
+            message: "Oops..please enter valid email",
+          }),
+        ],
+        required: true,
       },
-      required: [true, "User phone number required"],
-    },
-
-    dob: {
-      type: Date,
-      validate: {
-        validator: function (v) {
-          var today = new Date();
-          var birthDate = v;
-          var age = today.getFullYear() - birthDate.getFullYear();
-          var m = today.getMonth() - birthDate.getMonth();
-          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-          }
-          return age >= 18;
-        },
-        message: (props) => "You must be 18 years old.",
-      },
-      required: true,
-    },
     password: {
       type: String,
       required: true,
       minlength: 7,
     },
+    phone: {
+        type: String,
+        validate: {
+          validator: function (v) {
+            return /0\d{2}\d{4}\d{4}/.test(v);
+          },
+          message: "Phone number is not valid, allows only 11 digits",
+        },
+        required: [true, "User phone number required"],
+      },
+  
+      dob: {
+        type: Date,
+        validate: {
+          validator: function (v) {
+            var today = new Date();
+            var birthDate = v;
+            var age = today.getFullYear() - birthDate.getFullYear();
+            var m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
+            }
+            return age >= 18;
+          },
+          message: (props) => "You must be 18 years old.",
+        },
+        required: true,
+      },
     role: {
       type: String,
       required: true,
       trim: true,
       default: "user",
     },
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-      validate: [
-        validator({
-          validator: "isEmail",
-          message: "Oops..please enter valid email",
-        }),
-      ],
-      required: true,
-    },
+  
     resetLink: {
       data: String,
       default: "",
