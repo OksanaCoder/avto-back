@@ -1,19 +1,17 @@
 const express = require("express");
 const UserModel = require("./Schema");
-const mailgun = require("mailgun-js");
+
 const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const jwt = require("jsonwebtoken");
 
 const _ = require("lodash");
-const DOMAIN = process.env.DOMAIN;
-const mg = mailgun({ apiKey: process.env.MAILGUN_APIKEY, domain: DOMAIN });
+
 const { authenticate, refreshToken } = require("../auth/authTools");
 const { authorize, adminOnly } = require("../middlewares/authorize");
 const { json } = require("express");
 const router = express.Router();
-
 
 router.post("/register", async (req, res) => {
   try {
@@ -35,13 +33,9 @@ router.post("/register", async (req, res) => {
         return res.status(409).send("user with same email exists");
       }
 
-      const token = jwt.sign(
-        {newUser},
-        process.env.ACC_ACTIVATION_KEY,
-        {
-          expiresIn: "30m",
-        }
-      );
+      const token = jwt.sign({ newUser }, process.env.ACC_ACTIVATION_KEY, {
+        expiresIn: "30m",
+      });
 
       const data = {
         from: "avtoeinc@gmail.com",
@@ -153,16 +147,16 @@ router.post("/email-activate", async (req, res, next) => {
                 //   return res.json({ message: "Account Activated!" });
                 // });
                 sgMail
-                .send(data)
-                .then(() => {
-                  console.log("Email sent");
-                  res.json({
-                    message: "Account Activated",
+                  .send(data)
+                  .then(() => {
+                    console.log("Email sent");
+                    res.json({
+                      message: "Account Activated",
+                    });
+                  })
+                  .catch((error) => {
+                    console.error(error);
                   });
-                })
-                .catch((error) => {
-                  console.error(error);
-                });
               });
             });
           } catch (error) {
@@ -208,16 +202,16 @@ router.put("/forgot-password", async (req, res, next) => {
           return res.status(400).json({ error: "reset passord link error" });
         } else {
           sgMail
-        .send(data)
-        .then(() => {
-          console.log("Email sent");
-          res.json({
-            message: "An email has been sent to you!",
-          });
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+            .send(data)
+            .then(() => {
+              console.log("Email sent");
+              res.json({
+                message: "An email has been sent to you!",
+              });
+            })
+            .catch((error) => {
+              console.error(error);
+            });
         }
       });
     });
