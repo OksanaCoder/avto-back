@@ -41,7 +41,7 @@ const userSchema = new Schema(
         type: String,
         validate: {
           validator: function (v) {
-            return /0\d{2}\d{4}\d{4}/.test(v);
+            return /0\d{1}\d{4}\d{4}/.test(v);
           },
           message: "Phone number is not valid, allows only 11 digits",
         },
@@ -123,9 +123,9 @@ userSchema.methods.toJSON = function () {
 
   return userObject;
 };
-userSchema.statics.findByCredentials = async (username, password) => {
+userSchema.statics.findByCredentials = async (email, password) => {
   const user = await UserModel.findOne({
-    username: username,
+    email
   });
   console.log("Whats going on here",user);
   const isMatch = await bcrypt.compare(password, user.password);
