@@ -14,17 +14,17 @@ const router = express.Router();
 
 router.post("/register", async (req, res) => {
   try {
-    // const {
-    //   name,
-    //   surname,
-    //   username,
-    //   phone,
-    //   dob,
-    //   email,
-    //   password,
-    //   //role,
-    // } = req.body;
-    const newUser = new UserModel(req.body);
+    const {
+      firstname,
+      lastname,
+      username,
+      phone,
+      dob,
+      email,
+      password,
+      //role,
+    } = req.body;
+    const newUser = new UserModel({ ...req.body });
     // const filepath = path.join(__dirname, `../../public/ADEDEJIMICHAEL.pdf`)
     // console.log(filepame)
     UserModel.findOne({ email }).exec((err, user) => {
@@ -32,9 +32,14 @@ router.post("/register", async (req, res) => {
         return res.status(409).send("user with same email exists");
       }
 
-      const token = jwt.sign({ newUser }, process.env.ACC_ACTIVATION_KEY, {
-        expiresIn: "30m",
-      });
+      const token = jwt.sign(
+        { firstname, lastname, username, phone, dob, email, password },
+        process.env.ACC_ACTIVATION_KEY,
+        {
+          expiresIn: "30m",
+        }
+      );
+      console.log(token);
 
       const data = {
         from: "avtoeinc@gmail.com",
@@ -93,8 +98,8 @@ router.post("/email-activate", async (req, res, next) => {
 
           try {
             const {
-              name,
-              surname,
+              firstname,
+              lastname,
               username,
               phone,
               dob,
@@ -108,8 +113,8 @@ router.post("/email-activate", async (req, res, next) => {
                 return res.status(409).send("user with same email exists");
               }
               let newUser = new UserModel({
-                name,
-                surname,
+                firstname,
+                lastname,
                 username,
                 phone,
                 dob,
@@ -123,18 +128,17 @@ router.post("/email-activate", async (req, res, next) => {
                   return res.status(400), json({ error: err });
                 }
                 const data = {
-                  from: "noreply@betsoka.com.ng",
+                  from: "avtoeinc@gmail.com",
                   to: email,
                   subject: "Account Activated!",
-                  html: `<h2> Congratulations, ${name} your account has been activated successfully</h2>
+                  html: `<h2> Congratulations, ${firstname} your account has been activated successfully</h2>
                
-                <h4>You can now bet with you account!</h4>
+                <h4>You can now bid with you account!</h4>
                 
                 <small>Best regards,</small>
                 <br>
-                <strong>BetSoka INC</strong>
-                <br>
-                <strong>Lagos, Nigeria</strong>
+                <strong>Avtoe</strong>
+               
                 `,
                 };
                 // mg.messages().send(data, function (error, body) {
@@ -183,7 +187,7 @@ router.put("/forgot-password", async (req, res, next) => {
       });
 
       const data = {
-        from: "noreply@betsoka.com.ng",
+        from: "avtoeinc@gmail.com",
         to: email,
         subject: "PASSWORD ACTIVATION LINK",
         html: `<h2> Please click on given link to reset your password</h2>
@@ -191,9 +195,8 @@ router.put("/forgot-password", async (req, res, next) => {
         <p>${process.env.CLIENT_URL}/forgot-password/${token}</>
         <small>Best regards,</small>
         <br>
-        <strong>BetSoka INC</strong>
-        <br>
-        <strong>Lagos, Nigeria</strong>
+        <strong>Avtoe</strong>
+       
         `,
       };
       return user.updateOne({ resetLink: token }, function (err, success) {
@@ -308,9 +311,9 @@ router.put("/:username", authorize, async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    const user = await UserModel.findByCredentials(username, password);
+    const user = await UserModel.findByCredentials(email, password);
     // console.log(user)
     const tokens = await authenticate(user);
     console.log("newly generated token : ", tokens);
@@ -328,7 +331,7 @@ router.post("/login", async (req, res, next) => {
     //     path: "/users/refreshToken",
     // })
     if (user) {
-      res.send(user);
+      //res.send(user);
       res.send("login successfully");
     } else {
       res.status(404).json({ message: "User not found!" });
