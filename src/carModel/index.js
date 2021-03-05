@@ -6,8 +6,8 @@ const multer = require("multer");
 const { writeFile } = require("fs-extra");
 const q2m = require("query-to-mongo");
 
-const carSchema = require("./schema");
-const carModel = require("./schema");
+const carSchema = require("./Schema");
+const carModel = require("./Schema");
 const { authorize, adminOnly } = require("../middlewares/authorize");
 
 const router = express.Router();
