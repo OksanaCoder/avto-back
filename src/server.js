@@ -3,7 +3,6 @@ const listEndpoints = require("express-list-endpoints");
 const mongoose = require("mongoose");
 const helmet = require("helmet");
 const cors = require("cors");
-
 const { join } = require("path");
 const cookieParser = require("cookie-parser");
 const passport = require("passport");

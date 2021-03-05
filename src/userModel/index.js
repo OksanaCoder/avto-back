@@ -3,7 +3,6 @@ const UserModel = require("./Schema");
 
 const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
 const jwt = require("jsonwebtoken");
 
 const _ = require("lodash");

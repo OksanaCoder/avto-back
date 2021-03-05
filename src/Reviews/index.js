@@ -1,7 +1,7 @@
 const express = require("express")
 const fs = require("fs-extra")
 const path = require ("path")
-const ReviewSchema =require("./schema")
+const ReviewSchema =require("./Schema")
 const router = express.Router()
 
 
