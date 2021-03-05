@@ -1,13 +1,23 @@
-const express = require("express")
-const cors = require("cors")
-const dotenv = require("dotenv")
-dotenv.config()
-const db = require("./db")
-const userRouter = require("./userModel/index");
+const express = require("express");
+const listEndpoints = require("express-list-endpoints");
+const mongoose = require("mongoose");
+const helmet = require("helmet");
+const cors = require("cors");
+
+const { join } = require("path");
 const cookieParser = require("cookie-parser");
-const listEndpoints = require("express-list-endpoints")
-const path = require("path")
-const server = express()
+const passport = require("passport");
+
+const userRoute = require("./userModel/index");
+
+const {
+  notFoundHandler,
+  forbiddenHandler,
+  badRequestHandler,
+  genericErrorHandler,
+  conflictedHandler,
+} = require("./errorHandlers/index");
+const server = express();
 const whitelist = ["http://localhost:3000", "http://localhost:3001"];
 const corsOptions = {
   origin: (origin, callback) => {
@@ -20,11 +30,34 @@ const corsOptions = {
   credentials: true,
 };
 
-server.use(cors(corsOptions))
-server.use(express.json());
+server.use(cors(corsOptions));
 server.use(cookieParser());
-server.use(express.static(path.join(__dirname, `../public`)))
-server.use("/users", userRouter);
+server.use(helmet());
+const staticFolderPath = join(__dirname, "../public");
+console.log(staticFolderPath);
+server.use(express.static(staticFolderPath));
+
+server.use(passport.initialize());
+
+server.use(express.json());
+
+server.use("/users", userRoute);
 server.use("/cars", require("./carModel/index"));
-console.log(listEndpoints(server))
-server.listen(process.env.PORT || 3456, () => console.log("Running on ", process.env.PORT || 3456))
+server.use("/reviews", require("./Reviews/index"));
+
+server.use(badRequestHandler);
+server.use(forbiddenHandler);
+server.use(notFoundHandler);
+server.use(conflictedHandler);
+server.use(genericErrorHandler);
+
+console.log(listEndpoints(server));
+mongoose
+  .connect(process.env.MONGO_STRING, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Mongo Db connected"))
+  .catch((err) => console.log(err));
+
+module.exports = server;

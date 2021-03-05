@@ -1,101 +1,132 @@
 const jwt = require("jsonwebtoken")
-const db = require("../db")
+const UserModel = require("../userModel/Schema");
 
 const authenticate = async (user) => {
-    try {
-        const newAccessToken = await generateJWT({ _id: user._id })
-        console.log("New access token", newAccessToken)
-        const newRefreshToken = await generateRefreshJWT({ _id: user._id })
+  try {
+  
+    const newAccessToken = await generateJWT({
+      _id: user._id
+    })
+    console.log("new acces token ", newAccessToken)
+    const newRefreshToken = await generateRefreshJWT({
+      _id: user._id
+    })
 
-        let params = []
-        let query = `UPDATE "users" SET refresh_token = '${newRefreshToken}'`
+    user.refreshTokens = user.refreshTokens.concat({
+      token: newRefreshToken
+    })
+    await user.save()
 
-        params.push(user._id)
-        query += " WHERE _id = $" + (params.length) + " RETURNING *",
-        
-        console.log(query)
-
-        const result = await db.query(query, params)
-        console.log(result)
-        return { accessToken: newAccessToken, refreshToken: newRefreshToken }
-    } catch (error) {
-        console.log(error)
-        throw new Error(error)
+    return {
+      token: newAccessToken,
+      refreshToken: newRefreshToken
     }
+  } catch (error) {
+    console.log(error)
+    throw new Error(error)
+  }
 }
 
 const generateJWT = (payload) =>
-    new Promise((res, rej) =>
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '10m' },
-            (err, token) => {
-                if (err) rej(err)
-                res(token)
-            }
-        )
+  new Promise((res, rej) =>
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET, {
+        expiresIn: "20m"
+      },
+      (err, token) => {
+        if (err) rej(err)
+        res(token)
+      }
     )
+  )
 
-const verifyJWT = (token) =>
-    new Promise((res, rej) =>
-        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-            if (err) rej(err)
-            console.log("verifyJWT output => " + decoded)
-            res(decoded)
-        })
-    )
+const verifyJWT = async (token) => {
+  console.log("TOKEN FROM VERIFY", token)
+  console.log(process.env.JWT_SECRET)
+  return await new Promise((res, rej) =>
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        console.log(err)
+        rej(err)
+      }
+
+      console.log("DECODED", decoded)
+      return res(decoded)
+    })
+  )
+}
+
 
 const generateRefreshJWT = (payload) =>
-    new Promise((res, rej) =>
-        jwt.sign(
-            payload,
-            process.env.REFRESH_SECRET,
-            { expiresIn: "1 week" },
-            (err, token) => {
-                if (err) rej(err)
-                res(token)
-            }
-        )
+  new Promise((res, rej) =>
+    jwt.sign(
+      payload,
+      process.env.REFRESH_JWT_SECRET, {
+        expiresIn: "1 week"
+      },
+      (err, token) => {
+        if (err) rej(err)
+        res(token)
+      }
     )
+  )
 
 const refreshToken = async (oldRefreshToken) => {
-    const decoded = await verifyRefreshToken(oldRefreshToken)
+  const decoded = await verifyRefreshToken(oldRefreshToken)
 
-    const user = await db.query('SELECT * FROM "users" WHERE _id= $1',
-        [decoded._id])
+  const user = await UserModel.findOne({
+    _id: decoded._id
+  })
 
-    if (!user) {
-        throw new Error(`Access is forbidden`)
-    }
+  if (!user) {
+    throw new Error(`Access is forbidden`)
+  }
 
-    const currentRefreshToken = user.rows[0].refreshToken
+  const currentRefreshToken = user.refreshTokens.find(
+    (t) => t.token === oldRefreshToken
+  )
 
-    if (!currentRefreshToken) {
-        throw new Error(`Refresh token is wrong`)
-    }
+  if (!currentRefreshToken) {
+    throw new Error(`Refresh token is wrong`)
+  }
 
-    const newAccessToken = await generateJWT({ _id: user.rows[0]._id })
-    const newRefreshToken = await generateRefreshJWT({ _id: user.rows[0]._id })
+  // generate tokens
+  const newAccessToken = await generateJWT({
+    _id: user._id
+  })
+  const newRefreshToken = await generateRefreshJWT({
+    _id: user._id
+  })
 
-    let params = []
-    let query = `UPDATE "users" SET refresh_token = '${newRefreshToken}'`
+  // save in db
+  const newRefreshTokens = user.refreshTokens
+    .filter((t) => t.token !== oldRefreshToken)
+    .concat({
+      token: newRefreshToken
+    })
 
-    params.push(decoded._id)
-    query += " WHERE _id = $" + (params.length) + " RETURNING *"
-    console.log(query)
+  user.refreshTokens = [...newRefreshTokens]
 
-    const result = await db.query(query, params)
+  await user.save()
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken }
+  return {
+    token: newAccessToken,
+    refreshToken: newRefreshToken
+  }
 }
 
 const verifyRefreshToken = (token) =>
-    new Promise((res, rej) =>
-        jwt.verify(token, process.env.REFRESH_SECRET, (err, decoded) => {
-            if (err) rej(err)
-            res(decoded)
-        })
-    )
+  new Promise((res, rej) =>
+    jwt.verify(token, process.env.REFRESH_JWT_SECRET, (err, decoded) => {
+      if (err) rej(err)
+      res(decoded)
+    })
+  )
 
-module.exports = { authenticate, verifyJWT, refreshToken }
+module.exports = {
+  authenticate,
+  verifyJWT,
+  refreshToken
+}
