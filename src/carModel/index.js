@@ -1,151 +1,124 @@
-const express = require("express")
-const db = require("../db")
-const { authorize, onlyForAdmin } = require("../middlewares/authorize")
-const router = express.Router()
-const fs = require("fs-extra")
-const path = require("path")
-const multer = require("multer")
-const upload = multer()
-const port = process.env.PORT
-const imagePath = path.join(__dirname, "../../../public/img/products")
-console.log(imagePath)
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const { join } = require("path");
+const multer = require("multer");
+const { writeFile } = require("fs-extra");
+const q2m = require("query-to-mongo");
 
-router.post("/:id/upload", upload.single("product"), async (req, res, next) => {
-    try {
-      await fs.writeFile(path.join(imagePath, `${req.params.id}.png`), req.file.buffer)
-      req.body = {
-        imageurl: `http://127.0.0.1:${port}/img/cars/${req.params.id}.png`
-      }
-      let params = []
-      let query = 'UPDATE "cars" SET '
-      for (bodyParamName in req.body) {
-          query += // for each element in the body I'll add something like parameterName = $Position
-              (params.length > 0 ? ", " : '') + //I'll add a coma before the parameterName for every parameter but the first
-              bodyParamName + " = $" + (params.length + 1) // += Category = $1 
-          params.push(req.body[bodyParamName]) //save the current body parameter into the params array
-      }
-      params.push(req.params.id) //push the id into the array
-      query += " WHERE _id = $" + (params.length) + " RETURNING *" 
-      console.log(query)
-      const result = await db.query(query, params) //querying the DB for updating the row
-      if (result.rowCount === 0) //if no element match the specified id => 404
-          return res.status(404).send("Not Found")
-      res.send(result.rows[0]) //else, return the updated version
-    } catch (error) {
-      next(error)
+const carSchema = require("./Schema");
+const carModel = require("./Schema");
+const { authorize, adminOnly } = require("../middlewares/authorize");
+
+const router = express.Router();
+const upload = multer({});
+//const productsFolderPath =join(__dirname, "../../../public/image/products")
+const readFile = (fileName) => {
+  const buffer = fs.readFileSync(path.join(__dirname, fileName));
+  const fileContent = buffer.toString();
+  return JSON.parse(fileContent);
+};
+
+const imagePath = path.join(__dirname, "../../../public/img");
+
+router.post("/:id/upload", upload.single("car"), async (req, res, next) => {
+  console.log(req.file.buffer);
+  try {
+    fs.writeFile(join(imagePath, `${req.params.id}.jpg`), req.file.buffer);
+
+    req.body = {
+      imageUrl: `${process.env.BACK_URL}/img/${req.params.id}.jpg`,
+    };
+    const product = await carModel.findByIdAndUpdate(req.params.id, req.body);
+    console.log(product);
+    if (product) {
+      res.status(204).send(product);
+    } else {
+      const error = new Error(`user with id ${req.params.id} not found`);
+      error.httpStatusCode = 404;
+      next(error);
     }
-  })
+  } catch (error) {
+    next(error);
+  }
+});
 
+router.get("/", async (req, res, next) => {
+  try {
+    const parsedQuery = q2m(req.query);
+    const products = await carSchema
+      .find(parsedQuery.criteria, parsedQuery.options.fields)
+      .populate("reviews")
+      .sort(parsedQuery.options.sort)
+      .limit(parsedQuery.options.limit)
+      .skip(parsedQuery.options.skip);
 
-router.get("/", async(req, res)=>{
-   // const order = req.query.order || "asc"
-    const offset = req.query.offset || 0
-    const limit = req.query.limit
-    
-    //delete req.query.order
-    delete req.query.offset
-    delete req.query.limit
-    
-    let query = 'SELECT * FROM "cars"'
-    const params=[]
-    for (const queryParam in req.query) {
-        params.push(req.query[queryParam])
-        if (params.length === 1) 
-            query += `WHERE ${queryParam} = $${params.length} `
-        else 
-            query += ` AND ${queryParam} = $${params.length} `
+    res.send({ products, Total: products.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:id", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const product = await carSchema.findById(id);
+
+    if (product) {
+      res.send(product);
+    } else {
+      const error = new Error();
+      error.httpStatusCode = 404;
+      next(error);
     }
-    
-    //query += " ORDER BY brand " + order; 
+  } catch (error) {
+    error.httpStatusCode = 404;
+    next("While reading products from DB problem occured"); // next is sending the error to the error handler
+  }
+});
 
-    params.push (limit)
-    query += ` LIMIT $${params.length} `
-    params.push(offset)
-    query += ` OFFSET $${params.length}`
-    
-    
-    const response = await db.query(query, params)
-    res.send({count: response.rows.length, cars: response.rows})
+router.get("/:id/review", async (req, res, next) => {
+  try {
+    const product = await carModel.carReview(req.params.id);
+    res.send(product);
+  } catch (error) {
+    error.httpStatusCode = 404;
+    next("While reading products review from DB problem occured"); // next is sending the error to the error handler
+  }
+});
 
-})
+router.post("/",authorize, adminOnly,async (req, res, next) => {
+  try {
+    const newProduct = new carSchema(req.body);
+    const { _id } = await newProduct.save();
+    res.status(201).send("New products added with Id: " + _id);
+  } catch (error) {
+    next(error);
+  }
+});
 
-router.get("/search/:query", async(req, res) => {
-    const response = await db.query(`SELECT * FROM "cars" WHERE 
-                                    model ILIKE '${"%" + req.params.query + "%"}' OR
-                                    year ILIKE '${"%" + req.params.query + "%"}'
-                                    LIMIT $1 OFFSET $2 
-                                    `, [ req.query.limit || 10, req.query.offset || 0])
+router.put("/:id", authorize, adminOnly, async (req, res) => {
+  const product = await carSchema.findByIdAndUpdate(req.params.id, req.body);
+  if (product) {
+    res.status(204).send(product);
+  } else {
+    const error = new Error(`user with id ${req.params.id} not found`);
+    error.httpStatusCode = 404;
+    next(error);
+  }
+});
 
-    res.send(response.rows)
-})
-router.get("/:id", async (req, res)=>{
-    const response = await db.query('SELECT * FROM "cars" WHERE _id= $1', 
-                                                                                        [ req.params.id ])
+router.delete("/:id", authorize, adminOnly, async (req, res) => {
+  const product = await carSchema.findByIdAndDelete(req.params.id);
+  if (product) {
+    res.send(`Deleted products with id: ${req.params.id}`);
+  } else {
+    const error = new Error(`Product with id ${req.params.id} not found`);
+    error.httpStatusCode = 404;
+    next(error);
+  }
+});
 
-    if (response.rowCount === 0) 
-        return res.status(404).send("Not found")
+//Review
 
-    res.send(response.rows[0])
-})
-
-router.get("/:id/reviews", async (req, res)=>{
-    const response = await db.query(`SELECT  * FROM "reviews" 
-                                    JOIN "cars" ON reviews.productid= products._id 
-                                    AND cars._id = $1`, 
-                                    [req.params.id])
-    if (response.rowCount === 0) 
-        return res.status(404).send("Not found")
-
-    res.send(response.rows)
-})
-
-router.post("/", authorize, onlyForAdmin, async (req, res)=> {
-    const response = await db.query(`INSERT INTO "cars" ( make, model,year, price,fuel,odometer,transmission,drive,color,contact,location description) 
-                                     Values ($1, $2, $3, $4, $5,$6,$7, $8, $9, $10, $11,$12)
-                                     RETURNING *`, 
-                                    [ req.body.make, req.body.model, req.body.year, req.body.price, req.body.fuel, req.body.odometer, req.body.transmission, req.body.drive, req.body.color, req.body.contact, req.body.location ])
-    
-    console.log(response)
-    res.send(response.rows[0])
-})
-
-router.put("/:id",authorize, onlyForAdmin, async (req, res)=> {
-    try {
-        let params = []
-        let query = 'UPDATE "cars" SET '
-        for (bodyParamName in req.body) {
-            query +=
-                (params.length > 0 ? ", " : '') +
-                bodyParamName + " = $" + (params.length + 1) 
-
-            params.push(req.body[bodyParamName])
-        }
-
-        params.push(req.params.id) //push the asin into the array
-        query += " WHERE _id = $" + (params.length) + " RETURNING *" 
-        console.log(query)
-
-        const result = await db.query(query, params) //querying the DB for updating the row
-
-       
-        if (result.rowCount === 0) //if no element match the specified ASIN => 404
-            return res.status(404).send("Not Found")
-
-        res.send(result.rows[0]) //else, return the updated version
-    }
-    catch(ex) {
-        console.log(ex)
-        res.status(500).send(ex)
-    }
-})
-
-router.delete("/:id",authorize, onlyForAdmin, async (req, res) => {
-    const response = await db.query(`DELETE FROM "cars" WHERE _id= $1`, [ req.params.id ])
-
-    if (response.rowCount === 0)
-        return res.status(404).send("Not Found")
-    
-    res.send("OK")
-})
-
-module.exports = router
+module.exports = router;
