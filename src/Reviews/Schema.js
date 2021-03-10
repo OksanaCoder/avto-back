@@ -2,7 +2,7 @@ const { Schema } = require("mongoose");
 const mongoose = require("mongoose");
 const valid = require("validator");
 
-var x = Date.now;
+
 const ReviewSchema = new Schema(
   {
     comment: {
@@ -27,10 +27,10 @@ const ReviewSchema = new Schema(
   }
 );
 
-ReviewSchema.pre("save", function (next) {
-  this.createdAt = Date.now();
-  next();
-});
+// ReviewSchema.pre("save", function (next) {
+//   this.createdAt = Date.now();
+//   next();
+// });
 
 const reviewModel = mongoose.model("reviews", ReviewSchema);
 module.exports = reviewModel;
