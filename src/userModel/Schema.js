@@ -4,14 +4,11 @@ const bcrypt = require("bcrypt")
 
 const userSchema = new Schema(
   {
-    firstname: {
+    name: {
       type: String,
       required: true,
     },
-    lastname: {
-      type: String,
-      required: true,
-    },
+    
     username: {
       type: String,
       lowercase: true,
@@ -47,24 +44,6 @@ const userSchema = new Schema(
         },
         required: [true, "User phone number required"],
       },
-  
-      dob: {
-        type: Date,
-        validate: {
-          validator: function (v) {
-            var today = new Date();
-            var birthDate = v;
-            var age = today.getFullYear() - birthDate.getFullYear();
-            var m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-              age--;
-            }
-            return age >= 18;
-          },
-          message: (props) => "You must be 18 years old.",
-        },
-        required: true,
-      },
     role: {
       type: String,
       required: true,
@@ -84,10 +63,14 @@ const userSchema = new Schema(
         },
       },
     ],
-    // account: [{
-    //   type: Schema.Types.ObjectId,
-    //   ref: "bank_acount",
-    // }],
+    cars: [{
+      type: Schema.Types.ObjectId,
+      ref: "cars",
+    }],
+    reviews: [{
+      type: Schema.Types.ObjectId,
+      ref: "review",
+    }],
   },
 
   {
