@@ -15,13 +15,12 @@ const router = express.Router();
 router.post("/register", async (req, res) => {
   try {
     const {
-      firstname,
-      lastname,
+      name,
       username,
-      phone,
-      dob,
       email,
       password,
+      phone,
+     
       //role,
     } = req.body;
     const newUser = new UserModel({ ...req.body });
@@ -33,7 +32,7 @@ router.post("/register", async (req, res) => {
       }
 
       const token = jwt.sign(
-        { firstname, lastname, username, phone, dob, email, password },
+        { name, username, email, password, phone},
         process.env.ACC_ACTIVATION_KEY,
         {
           expiresIn: "30m",
@@ -45,7 +44,7 @@ router.post("/register", async (req, res) => {
         from: "avtoeinc@gmail.com",
         to: newUser.email,
         subject: "Account Activation Link",
-        html: `<h2> Please click on given link to activate your account</h2>
+        html: `<h2> Welcome ${newUser.name} click on given link to activate your account</h2>
         <p>This link expires in <strong>30 mins</strong> </p>
         <a href="${process.env.CLIENT_URL}/authentication/activate/${token}">Activate your account!</a>
         <p>${process.env.CLIENT_URL}/authentication/activate/${token}</>
@@ -98,13 +97,11 @@ router.post("/email-activate", async (req, res, next) => {
 
           try {
             const {
-              firstname,
-              lastname,
+              name,
               username,
-              phone,
-              dob,
               email,
               password,
+              phone,
               role,
             } = decodedToken;
             console.log(decodedToken);
@@ -113,13 +110,11 @@ router.post("/email-activate", async (req, res, next) => {
                 return res.status(409).send("user with same email exists");
               }
               let newUser = new UserModel({
-                firstname,
-                lastname,
+                name,
                 username,
-                phone,
-                dob,
                 email,
                 password,
+                phone,
                 role,
               });
               newUser.save((err, success) => {
@@ -131,7 +126,7 @@ router.post("/email-activate", async (req, res, next) => {
                   from: "avtoeinc@gmail.com",
                   to: email,
                   subject: "Account Activated!",
-                  html: `<h2> Congratulations, ${firstname} your account has been activated successfully</h2>
+                  html: `<h2> Congratulations, ${name} your account has been activated successfully</h2>
                
                 <h4>You can now bid with you account!</h4>
                 
@@ -269,10 +264,10 @@ router.put("/reset-password", async (req, res, next) => {
 router.get("/", authorize, adminOnly, async (req, res, next) => {
   try {
     const users = await UserModel.find(req.query);
-    res.send({
-      data: users,
-      total: users.length,
-    });
+    //res.setHeader('Access-Control-Expose-Headers', 'Content-Range');
+    res.header('Content-Range', `users 0-2/${users.length}`);
+    res.send(users);
+    next();
   } catch (error) {
     // console.log(error)
     next(error);
@@ -311,28 +306,28 @@ router.put("/:username", authorize, async (req, res, next) => {
 
 router.post("/login", async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    const user = await UserModel.findByCredentials(email, password);
+    const user = await UserModel.findByCredentials(username, password);
     // console.log(user)
     const tokens = await authenticate(user);
     console.log("newly generated token : ", tokens);
-    res.cookie("accessToken", tokens.token);
-    res.cookie("refreshToken", tokens.refreshToken);
-    // res.cookie("accessToken", tokens.token, {
-    //   httpOnly: true,
-    //   sameSite: "none",
-    //   secure: true,
-    // })
-    // res.cookie("refreshToken", tokens.refreshToken, {
-    //     httpOnly: true,
-    //     sameSite: "none",
-    //     secure: true,
-    //     path: "/users/refreshToken",
-    // })
+    // res.cookie("accessToken", tokens.token);
+    // res.cookie("refreshToken", tokens.refreshToken);
+    res.cookie("accessToken", tokens.token, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    })
+    res.cookie("refreshToken", tokens.refreshToken, {
+        httpOnly: true,
+        sameSite: "none",
+        secure: true,
+        path: "/users/refreshToken",
+    })
     if (user) {
       //res.send(user);
-      res.send("login successfully");
+      res.send({user, tokens});
     } else {
       res.status(404).json({ message: "User not found!" });
     }
