@@ -1,7 +1,7 @@
 const { Schema } = require("mongoose");
 const mongoose = require("mongoose");
 const valid = require("validator");
-const geocoder = require("../Utils/geoCoder")
+const geoCoder = require("../Utils/geoCoder")
 const carSchema = new Schema(
   {
     make: {
@@ -52,6 +52,10 @@ const carSchema = new Schema(
         type:String,
         required: true
     },
+    address:{
+      type:String,
+      required: true
+    },
     location: {
       type: {
         type: String,
@@ -79,7 +83,8 @@ const carSchema = new Schema(
 );
 
 carSchema.pre('save', async function (next) {
-  const loc = await geocoder.geocode(this.address)
+  const loc = await geoCoder.geocode(this.address)
+  console.log(loc)
   this.location = {
     type: 'Point',
     coordinates: [loc[0].longitude, loc[1].latitude],

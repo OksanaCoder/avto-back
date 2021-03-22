@@ -148,6 +148,55 @@ userSchema.post("save", function (error, doc, next) {
     next();
   }
 });
+userSchema.static("findProductInCart", async function (id, productId) {
+  const isProductThere = await userModel.findOne({
+    _id: id,
+    "cart._id":productId,
+  })
+  return isProductThere;
+})
+
+userSchema.static("incrementCartQuantity", async function (
+  id,
+ productId,
+  quantity
+) {
+  await userModel.findOneAndUpdate(
+    {
+      _id: id,
+      "cart._id":productId,
+    },
+    { $inc: { "cart.$.quantity": quantity } }
+  )
+})
+
+userSchema.static("addProductToCart", async function (id,product) {
+  await customerModel.findOneAndUpdate(
+    { _id: id },
+    {
+      $addToSet: { cart:product },
+    }
+  )
+})
+
+userSchema.static("removeProductFromCart", async function (id,productId) {
+  await customerModel.findByIdAndUpdate(id, {
+    $pull: { cart: { _id:productId } },
+  })
+})
+
+userSchema.static("checkCarFromCart", async function (id) {
+  await userModel.findByIdAndUpdate(id, {
+    $set: { cart: [] }, 
+  }, {multi: true})
+})
+
+userSchema.static("calculateCartTotal", async function (id) {
+  const { cart } = await userModel.findById(id)
+  return cart
+    .map((product) =>product.price * product.quantity)
+    .reduce((acc, el) => acc + el, 0)
+})
 // userSchema.static("bankAccount", async function(id){
 //   const accounts = await UserModel.find({_id: id}).populate("bank_acounts");
 //   return accounts;
