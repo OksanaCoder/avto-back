@@ -1,9 +1,8 @@
 const express = require("express");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
 const { join } = require("path");
 const multer = require("multer");
-const { writeFile } = require("fs-extra");
 const q2m = require("query-to-mongo");
 
 const carSchema = require("./Schema");
@@ -12,14 +11,14 @@ const { authorize, adminOnly } = require("../middlewares/authorize");
 
 const router = express.Router();
 const upload = multer({});
-//const productsFolderPath =join(__dirname, "../../../public/image/products")
+
+const imagePath = path.join(__dirname, "../../public/images/cars");
+
 const readFile = (fileName) => {
   const buffer = fs.readFileSync(path.join(__dirname, fileName));
   const fileContent = buffer.toString();
   return JSON.parse(fileContent);
 };
-
-const imagePath = path.join(__dirname, "../../../public/img");
 
 router.post("/:id/upload", upload.single("car"), async (req, res, next) => {
   console.log(req.file.buffer);
@@ -87,11 +86,59 @@ router.get("/:id/review", async (req, res, next) => {
   }
 });
 
-router.post("/",authorize, adminOnly,async (req, res, next) => {
+router.post(
+  "/image/:id",
+  upload.array("cars"),
+  authorize,
+  adminOnly,
+  async (req, res, next) => {
+    try {
+      console.log(req.files);
+      const images = [];
+      await Promise.all(
+        req.files.map(async (e) => {
+          const resolved = await fs.writeFile(
+            path.join(
+              __dirname,
+              `${imagePath}/${req.params.id + e.originalname}`
+            ),
+            e.buffer
+          );
+          images.push(
+            process.env.BACK_URL +
+              "/images/cars" +
+              req.params.id +
+              e.originalname
+          );
+        })
+      );
+      await Promise.all(
+        images.map(async (e) => {
+          const post = await carModel.updateOne(
+            {
+              _id: req.params.id,
+            },
+            {
+              $push: {
+                images: e,
+              },
+            }
+          );
+        })
+      );
+      const added = await carModel.findById(req.params.id);
+      res.send(added);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post("/", authorize, adminOnly, async (req, res, next) => {
   try {
-    const newCar= new carSchema(req.body);
+    const newCar = new carSchema(req.body);
     const { _id } = await newCar.save();
-    res.status(201).send("New products added with Id: " + _id);
+    res.status(201).json({ "new car added": _id });
   } catch (error) {
     next(error);
   }
@@ -118,7 +165,5 @@ router.delete("/:id", authorize, adminOnly, async (req, res) => {
     next(error);
   }
 });
-
-//Review
 
 module.exports = router;
