@@ -1,7 +1,7 @@
 const { Schema } = require("mongoose");
 const mongoose = require("mongoose");
 const valid = require("validator");
-
+const geocoder = require("../Utils/geoCoder")
 const carSchema = new Schema(
   {
     make: {
@@ -37,6 +37,9 @@ const carSchema = new Schema(
     imageUrl: {
       type: String,
     },
+    images: {
+      type: Array,
+    },
     transmission: {
       type: String,
       required: true,
@@ -49,8 +52,17 @@ const carSchema = new Schema(
         type:String,
         required: true
     },
-    location:{
-        
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+
+      },
+      coordinates: {
+        type: [Number],
+        index: "2dsphere",
+      },
+      formattedAddress: String,
     },
     description:{
         type: String,
@@ -65,6 +77,18 @@ const carSchema = new Schema(
   },
   { timestamps: true }
 );
+
+carSchema.pre('save', async function (next) {
+  const loc = await geocoder.geocode(this.address)
+  this.location = {
+    type: 'Point',
+    coordinates: [loc[0].longitude, loc[1].latitude],
+    formattedAddress: loc[0].formattedAddress
+  }
+  this.address = undefined
+  next()
+  console.log(loc)
+})
 
 carSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
