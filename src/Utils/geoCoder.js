@@ -7,6 +7,6 @@ const options = {
     formatter: null // 'gpx', 'string', ...
 };
 
-const geocoder = NodeGeocoder(options);
+const geoCoder = NodeGeocoder(options);
 
-module.exports = geocoder;
+module.exports = geoCoder;
